@@ -58,28 +58,36 @@ def create_files():
             arqv.write(df['IsomericSMILES'][i])
 
 
-molecula = argv[1]
-
-cid = get_result(f"http://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{molecula}/cids/TXT")
-
-if cid is not None:
-    IsomericSMILES = get_result(f"http://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/{cid}/property/IsomericSMILES/TXT")
-    print(f'Farmaco: \n {cid}')
-    print(f'Cid da farmaco:\n{cid}')
-    print(f'Isosmiles da farmaco:\n{IsomericSMILES}')
-
-    get_listkey(cid)
-    sleep(5)
-    df = pd.DataFrame(listkey_to_substructures())
-
-    print("Execuntando script...\n")
-
-    # Ajusta os isomiles
-    move_isosmiles(df)
-
-    # Cria arquivos .smi
-    create_files()
-
-    print('SCHLUSS!')
+if len(argv) < 2:
+    print("Você deve passar ao menos um parâmetro para este script.")
 else:
-    print('Farmaco nao presente no banco de dados')
+    for mol in range(1, len(argv)):
+        molecula = argv[mol]
+        print(f"{molecula}:\n")
+
+        cid = get_result(f"http://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{molecula}/cids/TXT")
+
+        if cid is not None:
+            IsomericSMILES = get_result(
+                f"http://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/{cid}/property/IsomericSMILES/TXT")
+            print(f'Farmaco: \n{cid}')
+            print(f'Cid da farmaco:\n{cid}')
+            print(f'Isosmiles da farmaco:\n{IsomericSMILES}')
+
+            get_listkey(cid)
+            sleep(5)
+            df = pd.DataFrame(listkey_to_substructures())
+
+            print("Execuntando script...\n")
+
+            # Ajusta os isomiles
+            move_isosmiles(df)
+
+            # Cria arquivos .smi
+            create_files()
+
+            print('SCHLUSS!')
+        else:
+            print('Farmaco nao presente no banco de dados')
+
+        print(f"\n{'-'*40}\n")
