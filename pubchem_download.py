@@ -11,6 +11,7 @@ from urllib.parse import quote
 from json import loads
 from time import sleep
 import os
+from xmltodict import parse
 from sys import argv
 
 
@@ -23,9 +24,9 @@ def get_result(url):
         return connection.read().rstrip().decode('utf-8')
 
 
-def get_listkey(cid):
+def get_listkey(smiles):
     """Gets list needed to get substructures"""
-    result = get_result(f"http://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/substructure/cid/{cid}/XML")
+    result = get_result(f"http://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/substructure/smiles/{smiles}/XML")
     if not result:
         return []
     listkey = ""
@@ -33,8 +34,8 @@ def get_listkey(cid):
         if line.find("ListKey") >= 0:
             listkey = line.split("ListKey>")[1][:-2]
     print(f'list required for substructures:\n{listkey}\n')
-    with open('listkey.txt', 'w') as list:
-        list.write(listkey)
+    with open('listkey.txt', 'w') as f:
+        f.write(listkey)
 
 
 def listkey_to_substructures():
@@ -42,8 +43,8 @@ def listkey_to_substructures():
     with open('listkey.txt', 'r') as list:
         listkey = list.read()
     result = get_result(
-        f"http://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/listkey/{listkey}/property/IsomericSMILES/JSON")
-    result = loads(result)['PropertyTable']['Properties']
+        f"http://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/listkey/{listkey}/property/IsomericSMILES/XML")
+    result = parse(result)['PropertyTable']['Properties']
     os.remove('listkey.txt')
     return result
 
@@ -187,7 +188,7 @@ for mol in molecules:
         print(f'isoSMILES:  {IsomericSMILES}\n')
         print(f"\n{'-' * 40}\n")
 
-        get_listkey(cid)
+        get_listkey(IsomericSMILES)
         sleep(1)
         df = pd.DataFrame(listkey_to_substructures())
 
