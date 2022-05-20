@@ -79,22 +79,22 @@ def create_files():
             arqv.write(df['IsomericSMILES'][i])
 
 
-def _name(mo):
+def _name(mol):
     """Gets initial information from the molecule's name"""
     global molecula, cid
-    molecula = mo
-    cid = get_result(f"http://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{mo}/cids/TXT")
+    molecula = mol
+    cid = get_result(f"http://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{mol}/cids/TXT")
     if cid is not None:
         return True
     else:
         return False
 
 
-def _cid(mo):
+def _cid(mol):
     """Gets initial information from a cid code"""
     global molecula, cid
-    cid = mo
-    molecula = get_result(f"http://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/{mo}/description/JSON")
+    cid = mol
+    molecula = get_result(f"http://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/{mol}/description/JSON").lower()
     if molecula is not None:
         molecula = loads(molecula)['InformationList']['Information'][0]['Title']
         return True
@@ -102,12 +102,12 @@ def _cid(mo):
         return False
 
 
-def _smiles(mo):
+def _smiles(mol):
     """Gets initial information from a smiles code"""
     global molecula, cid
-    smiles = get_result(f"http://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/smiles/description/JSON?smiles={quote(mo)}")
+    smiles = get_result(f"http://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/smiles/description/JSON?smiles="f"{quote(mol)}")
     if smiles is not None:
-        molecula = loads(smiles)['InformationList']['Information'][0]['Title']
+        molecula = loads(smiles)['InformationList']['Information'][0]['Title'].lower()
         cid = loads(smiles)['InformationList']['Information'][0]['CID']
         return True
     else:
@@ -125,9 +125,9 @@ creates files for each of them.
 It takes each inputted molecule descriptor (one per molecule) and tries to
 find information about said molecule on the Pubchem Compound Database. If it
 finds them, it searches for similar ones by substructure and collects their
-smiles and cid codes. Then it creates a folder "ligand" on the current path
-and saves each smiles retrieved a folder named after the input molecule, each
-in a different ".smi" file.
+smiles and cid codes. Then it saves them  on the current path's ./ligand 
+directory and saves each smiles retrieved a folder named after the input molecule,
+each in a different ".smi" file.
 
 Parameters:
   -n, --name                : Searches information on the base molecule by
@@ -142,7 +142,7 @@ A least one parameter must be passed.
 Everything that is not one of these parameters is considered a molecule
 descriptor.
 If more than one of these parameters is passed, the latest one will take
-effect. The exception is are the help parameters, which will always print
+effect. The exception is the help parameters, which will always print
 this message and end the program regardless of position or other parameters.
 """)
     exit(0)
