@@ -32,7 +32,7 @@ def get_listkey(cid):
     for line in result.split("\n"):
         if line.find("ListKey") >= 0:
             listkey = line.split("ListKey>")[1][:-2]
-    print(f'lista necessaria para as substruturas:\n{listkey}\n')
+    print(f'list required for substructures:\n{listkey}\n')
     with open('listkey.txt', 'w') as list:
         list.write(listkey)
 
@@ -64,19 +64,18 @@ def move_isosmiles():
 
 def create_files():
     """Create files"""
-    if os.path.isdir("./lingad"):
+    if not os.path.isdir("./ligand"):
         print("Missing ./ligand directory")
-    os.mkdir(f'ligand/{molecula}')
-
-    # Creates file with all cid and smiles
-    df.to_csv(f"{molecula}-pubchem.txt", sep=' ', header=False)
+        exit(1)
 
     # Creates files for each smiles
-    with open(f'ligand/{molecula}/{molecula}-{molecula}.smi', 'w') as arqv:
+    with open(f'ligand/{molecula}-{molecula}.smi', 'w') as arqv:
         arqv.write(IsomericSMILES)
     for i in range(1, len(df)):
-        with open(f'ligand/{molecula}/{molecula}-cid{df["CID"][i]}.smi', 'w') as arqv:
+        with open(f'ligand/{molecula}-cid{df["CID"][i]}.smi', 'w') as arqv:
             arqv.write(df['IsomericSMILES'][i])
+    # Creates file with all cid and smiles
+    df.to_csv(f"./ligand/{molecula}-pubchem.txt", sep=' ', header=False)
 
 
 def _name(mol):
@@ -182,12 +181,14 @@ for mol in molecules:
     if search_opts[key](mol):
         IsomericSMILES = get_result(
             f"http://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/{cid}/property/IsomericSMILES/TXT")
-        print(f'Drug: \n{molecula}')
-        print(f'cid:\n{cid}')
-        print(f'isoSMILES:\n{IsomericSMILES}')
+        print(f"\n{'-' * 40}\n")
+        print(f'Drug:  {molecula}\n')
+        print(f'cid:  {cid}\n')
+        print(f'isoSMILES:  {IsomericSMILES}\n')
+        print(f"\n{'-' * 40}\n")
 
         get_listkey(cid)
-        sleep(5)
+        sleep(1)
         df = pd.DataFrame(listkey_to_substructures())
 
         print()
