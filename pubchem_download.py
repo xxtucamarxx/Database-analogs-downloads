@@ -24,6 +24,7 @@ def get_result(url):
 
 
 def get_listkey(cid):
+    """Gets list needed to get substructures"""
     result = get_result(f"http://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/substructure/cid/{cid}/XML")
     if not result:
         return []
@@ -37,18 +38,24 @@ def get_listkey(cid):
 
 
 def listkey_to_substructures():
+    """Gets substructures from listkey"""
     with open('listkey.txt', 'r') as list:
         listkey = list.read()
     result = get_result(
         f"http://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/listkey/{listkey}/property/IsomericSMILES/JSON")
     result = loads(result)['PropertyTable']['Properties']
+    os.remove('listkey.txt')
     return result
 
 
-def move_isosmiles(df):
-    # Renomeia o codigo cid cujo isosmiles é igual ao do pubchem para o nome do farmaco
+def move_isosmiles():
+    """Formats cid/smiles DataFrame"""
+    global df
+    # Replaces cid as first column
+    df = df[['CID'] + ['IsomericSMILES']]
+    # Replaces main drug's cid for its name
     df.loc[df['IsomericSMILES'] == IsomericSMILES, 'CID'] = molecula
-    # Realoca o isosmiles do pubchem para primeiro da tabela
+    # Replaces main drug as first row
     index = df.index[df['CID'] == molecula].to_list()
     idx = index + [i for i in range(len(df)) if i != index[0]]
     df = df.iloc[idx]
@@ -56,8 +63,15 @@ def move_isosmiles(df):
 
 
 def create_files():
+    """Create files"""
+    if os.path.isdir("./lingad"):
+        print("Missing ./ligand directory")
     os.mkdir(f'ligand/{molecula}')
-    os.remove('listkey.txt')
+
+    # Creates file with all cid and smiles
+    df.to_csv(f"{molecula}-pubchem.txt", sep=' ', header=False)
+
+    # Creates files for each smiles
     with open(f'ligand/{molecula}/{molecula}-{molecula}.smi', 'w') as arqv:
         arqv.write(IsomericSMILES)
     for i in range(1, len(df)):
@@ -65,8 +79,8 @@ def create_files():
             arqv.write(df['IsomericSMILES'][i])
 
 
-# Function to get initial information from the molecule's name
 def _name(mo):
+    """Gets initial information from the molecule's name"""
     global molecula, cid
     molecula = mo
     cid = get_result(f"http://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{mo}/cids/TXT")
@@ -76,8 +90,8 @@ def _name(mo):
         return False
 
 
-# Function to get initial information from a cid code
 def _cid(mo):
+    """Gets initial information from a cid code"""
     global molecula, cid
     cid = mo
     molecula = get_result(f"http://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/{mo}/description/JSON")
@@ -88,8 +102,8 @@ def _cid(mo):
         return False
 
 
-# Function to get initial information from a smiles code
 def _smiles(mo):
+    """Gets initial information from a smiles code"""
     global molecula, cid
     smiles = get_result(f"http://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/smiles/description/JSON?smiles={quote(mo)}")
     if smiles is not None:
@@ -100,10 +114,10 @@ def _smiles(mo):
         return False
 
 
-# Help Message
 def _help():
+    """Help function"""
     print(f"""
-Usage: python3 {argv[0]} [-c] [-n] [-s] [-h] [molecule_descriptors]
+Usage: python3 {argv[0]} [-n] [-c] [-s] [-h] [molecule_descriptors]
 
 Downloads multiple molecule's substructures' CIDs and IsomericSMILES and
 creates files for each of them.
@@ -138,7 +152,6 @@ this message and end the program regardless of position or other parameters.
 if ("-h" in argv) or ("--help" in argv) or (len(argv) < 2):
     _help()
 
-param = 1  # Counter for iterating the script's parameters.
 key = "--name"  # Type of initial search to perform.
 molecules = []  # List of molecules passed as parameters to search.
 
@@ -153,7 +166,7 @@ cid = None  # CID of the initial molecule.
 print()
 
 # Iterates all parameters.
-while param < len(argv):
+for param in range(1, len(argv)):
     # Checks if parameter is on Search Dictionary.
     if argv[param] in search_opts.keys():
         key = argv[param]
@@ -169,25 +182,28 @@ for mol in molecules:
     if search_opts[key](mol):
         IsomericSMILES = get_result(
             f"http://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/{cid}/property/IsomericSMILES/TXT")
-        print(f'Farmaco: \n{molecula}')
-        print(f'Cid do farmaco:\n{cid}')
-        print(f'Isosmiles do farmaco:\n{IsomericSMILES}')
+        print(f'Drug: \n{molecula}')
+        print(f'cid:\n{cid}')
+        print(f'isoSMILES:\n{IsomericSMILES}')
 
         get_listkey(cid)
         sleep(5)
         df = pd.DataFrame(listkey_to_substructures())
 
-        print("Execuntando script...\n")
+        print()
+        print(f'{len(df.index)} substructures found')
 
-        # Ajusta os isomiles
-        move_isosmiles(df)
+        print("Running...\n")
 
-        # Cria arquivos .smi
+        # Adjusts smiles
+        move_isosmiles()
+
+        # Creates .smi files
         create_files()
 
         print('SCHLUSS!')
     else:
-        print('Descritor nao presente no banco de dados')
+        print('Descriptor not in database')
 
     # Resets states of molecula and cid.
     molecula = None
