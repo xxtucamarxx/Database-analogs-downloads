@@ -1,7 +1,8 @@
 # Downloads multiple molecule's substructures' CIDs and IsomericSMILES and creates files for each of them.
-# Autor: Arthur Lacerda
+# Autor: Arthur A de Lacerda
 # Autor: João Pedro Gonçalves Ribeiro
-# Desenvolvimento: 16/05/2022
+# Autor: Ramon Aragao
+# Desenvolvimento: 20/05/2022
 # Orientador: Edson Luiz Folador
 
 import pandas as pd
@@ -15,6 +16,7 @@ from sys import argv
 
 
 def get_result(url):
+    """Accesses web api page"""
     try:
         connection = urlopen(url)
     except HTTPError:
@@ -25,14 +27,13 @@ def get_result(url):
 
 def get_listkey(smiles):
     """Gets list needed to get substructures"""
-    result = get_result(f"http://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/substructure/smiles/{smiles}/XML")
+    result = get_result(
+        f"http://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/substructure/smiles/{smiles}/JSON")
     if not result:
+        print("Could not get necessary listkey")
         return []
-    listkey = ""
-    for line in result.split("\n"):
-        if line.find("ListKey") >= 0:
-            listkey = line.split("ListKey>")[1][:-2]
-    print(f'list required for substructures:\n{listkey}\n')
+
+    listkey = loads(result)['Waiting']['ListKey']
     with open('listkey.txt', 'w') as f:
         f.write(listkey)
 
@@ -50,16 +51,19 @@ def listkey_to_substructures():
 
 def move_isosmiles():
     """Formats cid/smiles DataFrame"""
-    global df
+    global pubchem_df
     # Replaces cid as first column
-    df = df[['IsomericSMILES'] + ['CID']]
+    pubchem_df = pubchem_df[['IsomericSMILES'] + ['CID']]
+
     # Replaces main drug's cid for its name
-    df.loc[df['IsomericSMILES'] == IsomericSMILES, 'CID'] = molecula
+    pubchem_df.loc[pubchem_df['IsomericSMILES'] == IsomericSMILES, 'CID'] = molecula
+
     # Replaces main drug as first row
-    index = df.index[df['CID'] == molecula].to_list()
-    idx = index + [i for i in range(len(df)) if i != index[0]]
-    df = df.iloc[idx]
-    df.reset_index(drop=True, inplace=True)
+    index = pubchem_df.index[pubchem_df['CID'] == molecula].to_list()
+    idx = index + [i for i in range(len(pubchem_df)) if i != index[0]]
+    pubchem_df = pubchem_df.iloc[idx]
+
+    pubchem_df.reset_index(drop=True, inplace=True)
 
 
 def create_files():
@@ -68,21 +72,30 @@ def create_files():
         print("Missing ./ligand directory")
         exit(1)
 
-    # Creates files for each smiles
+    # Creates file for main drug's smiles from pubchem
     with open(f'ligand/{molecula}-{molecula}.smi', 'w') as arqv:
         arqv.write(IsomericSMILES)
-    for i in range(1, len(df)):
-        with open(f'ligand/{molecula}-cid{df["CID"][i]}.smi', 'w') as arqv:
-            arqv.write(df['IsomericSMILES'][i])
-    # Creates file with all cid and smiles
-    df.to_csv(f"./ligand/{molecula}-pubchem.txt", sep=' ', header=False, index=False)
+
+    # Creates files for each smiles from pubchem
+    for i in range(1, len(pubchem_df)):
+        with open(f'ligand/{molecula}-cid{pubchem_df["CID"][i]}.smi', 'w') as arqv:
+            arqv.write(pubchem_df['IsomericSMILES'][i])
+
+    # Creates files for each smiles from zinc
+    for i in range(len(zinc_df)):
+        with open(f'ligand/{molecula}-zinc{zinc_df["ZINC"][i]}.smi', 'w') as arqv:
+            arqv.write(pubchem_df['IsomericSMILES'][i])
+
+    # Creates file with all smiles and cid from pubchem
+    pubchem_df.to_csv(f"./ligand/{molecula}-pubchem.txt", sep=' ', header=False, index=False)
 
 
 def _name(mol):
     """Gets initial information from the molecule's name"""
     global molecula, cid
     molecula = mol
-    cid = get_result(f"http://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{mol}/cids/TXT")
+    cid = get_result(
+        f"http://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{mol}/cids/TXT")
     if cid is not None:
         return True
     else:
@@ -93,9 +106,10 @@ def _cid(mol):
     """Gets initial information from a cid code"""
     global molecula, cid
     cid = mol
-    molecula = get_result(f"http://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/{mol}/description/JSON").lower()
+    molecula = get_result(
+        f"http://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/{mol}/description/JSON").lower()
     if molecula is not None:
-        molecula = loads(molecula)['InformationList']['Information'][0]['Title']
+        molecula = loads(molecula)['InformationList']['Information'][0]['Title'].lower()
         return True
     else:
         return False
@@ -104,7 +118,8 @@ def _cid(mol):
 def _smiles(mol):
     """Gets initial information from a smiles code"""
     global molecula, cid
-    smiles = get_result(f"http://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/smiles/description/JSON?smiles="f"{quote(mol)}")
+    smiles = get_result(
+        f"http://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/smiles/description/JSON?smiles="f"{quote(mol)}")
     if smiles is not None:
         molecula = loads(smiles)['InformationList']['Information'][0]['Title'].lower()
         cid = loads(smiles)['InformationList']['Information'][0]['CID']
@@ -122,8 +137,8 @@ Downloads multiple molecule's substructures' CIDs and IsomericSMILES and
 creates files for each of them.
 
 It takes each inputted molecule descriptor (one per molecule) and tries to
-find information about said molecule on the Pubchem Compound Database. If it
-finds them, it searches for similar ones by substructure and collects their
+find information about said molecule on the Pubchem Compound Database and ZINC15.
+If it finds them, it searches for similar ones by substructure and collects their
 smiles and cid codes. Then it saves them  on the current path's ./ligand 
 directory and saves each smiles retrieved a folder named after the input molecule,
 each in a different ".smi" file.
@@ -183,17 +198,26 @@ for mol in molecules:
             f"http://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/{cid}/property/IsomericSMILES/TXT")
         print(f"\n{'=' * 40}\n")
         print(f'Drug:  {molecula}\n')
-        print(f'cid:  {cid}\n')
-        print(f'isoSMILES:  {IsomericSMILES}\n')
-        print(f"\n{'=' * 40}\n")
+        print(f'CID:  {cid}\n')
+        print(f'IsomericSMILES:  {IsomericSMILES}\n')
+        print(f"{'=' * 40}\n\n")
 
+        # Downloads substructures from ZINC15
+        zinc = get_result(
+            f'https://zinc15.docking.org/substances.smi?count=all&ecfp4_fp-tanimoto-30={IsomericSMILES}')
+        with open(f"./ligand/{molecula}-zinc.txt", 'w') as file:
+            file.write(zinc)
+        zinc_df = pd.read_csv(f'./ligand/{molecula}-zinc.txt', sep=' ', header=None)
+        zinc_df.columns = ['IsomericSMILES', 'ZINC']
+        print(f'{len(zinc_df.index)} substructures found on ZINC15')
+
+        # Downloads substructures from PubChem
         get_listkey(IsomericSMILES)
-        sleep(1)
-        df = pd.DataFrame(listkey_to_substructures())
+        sleep(3)
+        pubchem_df = pd.DataFrame(listkey_to_substructures())
 
+        print(f'{len(pubchem_df.index)} substructures found on PubChem')
         print()
-        print(f'{len(df.index)} substructures found')
-
         print("Running...\n")
 
         # Adjusts smiles
