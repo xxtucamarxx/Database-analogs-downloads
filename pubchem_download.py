@@ -83,7 +83,7 @@ def create_files():
 
     # Creates files for each smiles from zinc
     for i in range(len(zinc_df)):
-        with open(f'ligand/{molecula}-zinc{zinc_df["ZINC"][i]}.smi', 'w') as arqv:
+        with open(f'ligand/{molecula}-{zinc_df["ZINC"][i]}.smi', 'w') as arqv:
             arqv.write(pubchem_df['IsomericSMILES'][i])
 
     # Creates file with all smiles and cid from pubchem
@@ -215,8 +215,8 @@ for mol in molecules:
         get_listkey(IsomericSMILES)
         sleep(3)
         pubchem_df = pd.DataFrame(listkey_to_substructures())
-
         print(f'{len(pubchem_df.index)} substructures found on PubChem')
+
         print()
         print("Running...\n")
 
