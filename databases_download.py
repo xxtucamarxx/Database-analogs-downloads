@@ -66,12 +66,9 @@ def move_isosmiles():
     pubchem_df.reset_index(drop=True, inplace=True)
 
 
-def create_files():
-    """Create files"""
-    if not os.path.isdir("./ligand"):
-        print("Missing ./ligand directory")
-        exit(1)
-
+def create_files_pubchem():
+    """Create pubchem files"""
+    global pubchem_df
     # Creates file for main drug's smiles from pubchem
     with open(f'ligand/{molecula}-{molecula}.smi', 'w') as arqv:
         arqv.write(IsomericSMILES)
@@ -81,13 +78,14 @@ def create_files():
         with open(f'ligand/{molecula}-cid{pubchem_df["CID"][i]}.smi', 'w') as arqv:
             arqv.write(pubchem_df['IsomericSMILES'][i])
 
+
+def create_files_zinc():
+    """Create zinc files"""
+    global zinc_df
     # Creates files for each smiles from zinc
     for i in range(len(zinc_df)):
         with open(f'ligand/{molecula}-{zinc_df["ZINC"][i]}.smi', 'w') as arqv:
             arqv.write(pubchem_df['IsomericSMILES'][i])
-
-    # Creates file with all smiles and cid from pubchem
-    pubchem_df.to_csv(f"./ligand/{molecula}-pubchem.txt", sep=' ', header=False, index=False)
 
 
 def _name(mol):
@@ -119,7 +117,7 @@ def _smiles(mol):
     """Gets initial information from a smiles code"""
     global molecula, cid
     smiles = get_result(
-        f"http://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/smiles/description/JSON?smiles="f"{quote(mol)}")
+        f"http://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/smiles/description/JSON?smiles={quote(mol)}")
     if smiles is not None:
         molecula = loads(smiles)['InformationList']['Information'][0]['Title'].lower()
         cid = loads(smiles)['InformationList']['Information'][0]['CID']
@@ -162,6 +160,11 @@ this message and end the program regardless of position or other parameters.
     exit(0)
 
 
+# Checks if the required "ligand" directory exists in current directory.
+if not os.path.isdir("./ligand"):
+    print("Missing ./ligand directory")
+    exit(1)
+
 # Checks for conditions that would cause the program to print a help message and close
 if ("-h" in argv) or ("--help" in argv) or (len(argv) < 2):
     _help()
@@ -188,7 +191,7 @@ for param in range(1, len(argv)):
         molecules.append(argv[param])  # Appends molecules' descriptors to be processed to the list molecules
     param += 1
 
-# Iterates all molecule descriptors in moleculees playlist
+# Iterates all molecule descriptors in molecules playlist
 for mol in molecules:
     print(f"{mol}:\n")
 
@@ -196,11 +199,28 @@ for mol in molecules:
     if search_opts[key](mol):
         IsomericSMILES = get_result(
             f"http://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/{cid}/property/IsomericSMILES/TXT")
-        print(f"\n{'=' * 40}\n")
+        print(f"\n{'-' * 30}\n")
         print(f'Drug:  {molecula}\n')
         print(f'CID:  {cid}\n')
         print(f'IsomericSMILES:  {IsomericSMILES}\n')
-        print(f"{'=' * 40}\n\n")
+        print(f"{'-' * 30}\n\n")
+
+        # Downloads substructures from PubChem
+        get_listkey(IsomericSMILES)
+        sleep(3)
+        pubchem_df = pd.DataFrame(listkey_to_substructures())
+
+        # Adjusts smiles on pubchem_df
+        move_isosmiles()
+
+        print(f'{len(pubchem_df.index)} substructures found on PubChem')
+
+        # Creates file with all smiles and cid from pubchem
+        pubchem_df.to_csv(f"./ligand/{molecula}-pubchem.txt", sep=' ', header=False, index=False)
+
+        print("Creating pubchem .smi files...\n")
+
+        create_files_pubchem()
 
         # Downloads substructures from ZINC15
         zinc = get_result(
@@ -211,20 +231,20 @@ for mol in molecules:
         zinc_df.columns = ['IsomericSMILES', 'ZINC']
         print(f'{len(zinc_df.index)} substructures found on ZINC15')
 
+<<<<<<< HEAD:pubchem_download.py
         # Downloads substructures from PubChem
         get_listkey(IsomericSMILES)
         sleep(3)
         pubchem_df = pd.DataFrame(listkey_to_substructures())
         print(f'{len(pubchem_df.index)} substructures found on PubChem')
 
+=======
+>>>>>>> b1c08eef84a1e1a3072efb923ada1c6ba5328bf5:databases_download.py
         print()
-        print("Running...\n")
-
-        # Adjusts smiles
-        move_isosmiles()
+        print("Creating zinc .smi files...\n")
 
         # Creates .smi files
-        create_files()
+        create_files_zinc()
 
         print('SCHLUSS!')
     else:
@@ -233,4 +253,4 @@ for mol in molecules:
     # Resets states of molecula and cid.
     molecula = None
     cid = None
-    print(f"\n{'-'*40}\n")
+    print(f"\n{'='*40}\n")
