@@ -207,7 +207,8 @@ for mol in molecules:
 
         # Downloads substructures from PubChem
         get_listkey(IsomericSMILES)
-        sleep(3)
+        print('sleep 5sec')
+        sleep(5)
         pubchem_df = pd.DataFrame(listkey_to_substructures())
 
         # Adjusts smiles on pubchem_df
@@ -224,22 +225,13 @@ for mol in molecules:
 
         # Downloads substructures from ZINC15
         zinc = get_result(
-            f'https://zinc15.docking.org/substances.smi?count=all&ecfp4_fp-tanimoto-30={IsomericSMILES}')
+            f'https://zinc15.docking.org/substances.smi?count=all&ecfp4_fp-tanimoto-30={quote(IsomericSMILES)}')
         with open(f"./ligand/{molecula}-zinc.txt", 'w') as file:
             file.write(zinc)
         zinc_df = pd.read_csv(f'./ligand/{molecula}-zinc.txt', sep=' ', header=None)
         zinc_df.columns = ['IsomericSMILES', 'ZINC']
         print(f'{len(zinc_df.index)} substructures found on ZINC15')
 
-<<<<<<< HEAD:pubchem_download.py
-        # Downloads substructures from PubChem
-        get_listkey(IsomericSMILES)
-        sleep(3)
-        pubchem_df = pd.DataFrame(listkey_to_substructures())
-        print(f'{len(pubchem_df.index)} substructures found on PubChem')
-
-=======
->>>>>>> b1c08eef84a1e1a3072efb923ada1c6ba5328bf5:databases_download.py
         print()
         print("Creating zinc .smi files...\n")
 
