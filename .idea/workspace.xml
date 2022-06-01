@@ -4,10 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="febec7a6-dbff-4aff-ac6d-6f7b3b37265c" name="Changes" comment="corrections">
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+    <list default="true" id="febec7a6-dbff-4aff-ac6d-6f7b3b37265c" name="Changes" comment="finished?">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/databases_download.py" beforeDir="false" afterPath="$PROJECT_DIR$/databases_download.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pubchem_download.py" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -196,7 +195,14 @@
       <option name="project" value="LOCAL" />
       <updated>1653327341369</updated>
     </task>
-    <option name="localTasksCounter" value="10" />
+    <task id="LOCAL-00010" summary="finished?">
+      <created>1653659073937</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1653659073937</updated>
+    </task>
+    <option name="localTasksCounter" value="11" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -210,7 +216,7 @@
                   <entry key="branch">
                     <value>
                       <list>
-                        <option value="Robinbrasil-master" />
+                        <option value="origin/teste" />
                       </list>
                     </value>
                   </entry>
@@ -227,6 +233,7 @@
     <MESSAGE value="Replaced searching by cid to searching by smiles" />
     <MESSAGE value="Pubchem done&#10;Missing zinc15" />
     <MESSAGE value="corrections" />
-    <option name="LAST_COMMIT_MESSAGE" value="corrections" />
+    <MESSAGE value="finished?" />
+    <option name="LAST_COMMIT_MESSAGE" value="finished?" />
   </component>
 </project>

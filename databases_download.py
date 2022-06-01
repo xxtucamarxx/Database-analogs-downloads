@@ -150,7 +150,7 @@ Parameters:
                               smiles.
   -h, --help                : Prints this message.
 
-A least one parameter must be passed.
+At least one parameter must be passed.
 Everything that is not one of these parameters is considered a molecule
 descriptor.
 If more than one of these parameters is passed, the latest one will take
@@ -189,13 +189,12 @@ for param in range(1, len(argv)):
         key = argv[param]
     else:
         molecules.append(argv[param])  # Appends molecules' descriptors to be processed to the list molecules
-    param += 1
 
 # Iterates all molecule descriptors in molecules playlist
 for mol in molecules:
     print(f"{mol}:\n")
 
-    # Executes search funtion and uses return to decide if it succedeed to retrieve the initial information.
+    # Executes search function and uses return to decide if it succeeded to retrieve the initial information.
     if search_opts[key](mol):
         IsomericSMILES = get_result(
             f"http://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/{cid}/property/IsomericSMILES/TXT")
@@ -226,13 +225,13 @@ for mol in molecules:
         # Downloads substructures from ZINC15
         zinc = get_result(
             f'https://zinc15.docking.org/substances.smi?count=all&ecfp4_fp-tanimoto-30={quote(IsomericSMILES)}')
+
+        # Creates file with all smiles and cid from ZINC15
         with open(f"./ligand/{molecula}-zinc.txt", 'w') as file:
             file.write(zinc)
         zinc_df = pd.read_csv(f'./ligand/{molecula}-zinc.txt', sep=' ', header=None)
         zinc_df.columns = ['IsomericSMILES', 'ZINC']
         print(f'{len(zinc_df.index)} substructures found on ZINC15')
-
-        print()
         print("Creating zinc .smi files...\n")
 
         # Creates .smi files
