@@ -68,24 +68,34 @@ def move_isosmiles():
 
 def create_files_pubchem():
     """Create pubchem files"""
-    global pubchem_df
+    global pubchem_df, max
     # Creates file for main drug's smiles from pubchem
     with open(f'ligand/{molecula}-{molecula}.smi', 'w') as arqv:
         arqv.write(IsomericSMILES)
 
     # Creates files for each smiles from pubchem
-    for i in range(1, len(pubchem_df)):
-        with open(f'ligand/{molecula}-cid{pubchem_df["CID"][i]}.smi', 'w') as arqv:
-            arqv.write(pubchem_df['IsomericSMILES'][i])
+    if max:
+        for i in range(1, int(max/2)):
+            with open(f'ligand/{molecula}-cid{pubchem_df["CID"][i]}.smi', 'w') as arqv:
+                arqv.write(pubchem_df['IsomericSMILES'][i])
+    else:
+        for i in range(1, len(pubchem_df)):
+            with open(f'ligand/{molecula}-cid{pubchem_df["CID"][i]}.smi', 'w') as arqv:
+                arqv.write(pubchem_df['IsomericSMILES'][i])
 
 
 def create_files_zinc():
     """Create zinc files"""
-    global zinc_df
+    global zinc_df, max
     # Creates files for each smiles from zinc
-    for i in range(len(zinc_df)):
-        with open(f'ligand/{molecula}-{zinc_df["ZINC"][i]}.smi', 'w') as arqv:
-            arqv.write(pubchem_df['IsomericSMILES'][i])
+    if max:
+        for i in range(int(max/2)):
+            with open(f'ligand/{molecula}-{zinc_df["ZINC"][i]}.smi', 'w') as arqv:
+                arqv.write(zinc_df["IsomericSMILES"][i])
+    else:
+        for i in range(len(zinc_df)):
+            with open(f'ligand/{molecula}-{zinc_df["ZINC"][i]}.smi', 'w') as arqv:
+                arqv.write(zinc_df['IsomericSMILES'][i])
 
 
 def _name(mol):
@@ -120,7 +130,7 @@ def _smiles(mol):
 def _help():
     """Help function"""
     print(f"""
-Usage: python3 {argv[0]} [molecule's name] [-n] [-c] [-s] [-h] [molecule_descriptors]
+Usage: python3 {argv[0]} [molecule's name] [-n] [-c] [-s] [-h] [molecule_descriptors] [-m] max molecules
 
 Downloads  molecule's substructures' CIDs and IsomericSMILES and
 creates files for each of them.
@@ -133,13 +143,16 @@ smiles retrieved a folder named after the input molecule, each in a
 different ".smi" file.
 
 Parameters:
-  -n, --name                : Searches information on the base molecule by
-                              name (Default).
-  -c, --cid                 : Searches information on the base molecule by
-                              cid.
-  -s, --smiles              : Searches information on the base molecule by
-                              smiles.
+  -n, --name                : Searches information on the base molecule by name (Default).
+                              
+  -c, --cid                 : Searches information on the base molecule by cid.
+                              
+  -s, --smiles              : Searches information on the base molecule by smiles.
+                              
+  -m, --max                 : Limits searched molecules.
+  
   -h, --help                : Prints this message.
+  
 
 At least one parameter must be passed.
 Everything that is not one of these parameters is considered a molecule
@@ -171,18 +184,22 @@ key = "--name"  # Type of initial search to perform.
 mol = argv[1]  # Molecule passed as parameter to search.
 molecula = argv[1]  # Name of the initial molecule
 cid = None  # CID of the initial molecule.
-
+max = None # Max number of molecules to be gathered
 
 print()
 
-
 # Iterates all parameters.
-for param in range(2, len(argv)):
+param = 2
+while param < len(argv):
+    if argv[param] == "-m" or "--max":
+        max = int(argv[param+1])
+        param += 2
     # Checks if parameter is on Search Dictionary.
-    if argv[param] in search_opts.keys():
+    elif argv[param] in search_opts.keys():
         key = argv[param]
-    else:
-        mol = argv[param]  # Appends molecules' descriptors to be processed to the list molecules
+        mol = argv[param + 1]  # Appends molecules' descriptors to be processed to the list molecules
+        param += 2
+
 
 # Iterates all molecule descriptors in molecules playlist
 print(f"Parameter: {mol}:\n")
@@ -191,22 +208,28 @@ print(f"Searching by: {key}")
 if search_opts[key](mol):
     IsomericSMILES = get_result(
         f"http://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/{cid}/property/IsomericSMILES/TXT")
-    print(f"\n{'-' * 30}\n")
+    print(f"{'-' * 100}\n")
     print(f'Drug:  {molecula}\n')
     print(f'CID:  {cid}\n')
     print(f'IsomericSMILES:  {IsomericSMILES}\n')
-    print(f"{'-' * 30}\n\n")
+    if max:
+        print(f"Download is limited to {max} molecules")
+    print(f"{'-' * 100}\n")
+
 
     # Downloads substructures from PubChem
     get_listkey(IsomericSMILES)
-    print('sleep 5sec')
-    sleep(5)
+    print()
+    print('sleep 2sec')
+    sleep(2)
+    print()
     pubchem_df = pd.DataFrame(listkey_to_substructures())
 
     # Adjusts smiles on pubchem_df
     move_isosmiles()
 
     print(f'{len(pubchem_df.index)} substructures found on PubChem')
+    print(f'Downloading {int(max/2)}')
 
     # Creates file with all smiles and cid from pubchem
     pubchem_df.to_csv(f"./ligand/{molecula}-pubchem.txt", sep=' ', header=False, index=False)
@@ -225,6 +248,7 @@ if search_opts[key](mol):
     zinc_df = pd.read_csv(f'./ligand/{molecula}-zinc.txt', sep=' ', header=None)
     zinc_df.columns = ['IsomericSMILES', 'ZINC']
     print(f'{len(zinc_df.index)} substructures found on ZINC15')
+    print(f'Downloading {int(max/2)}')
     print("Creating zinc .smi files...\n")
 
     # Creates .smi files
@@ -237,4 +261,4 @@ else:
 # Resets states of molecula and cid.
 molecula = None
 cid = None
-print(f"\n{'='*40}\n")
+print(f"\n{'='*100}\n")
